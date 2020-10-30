@@ -1,15 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import authentication_classes, permission_classes
+from django.contrib.auth.models import User
 import requests
 
 from .models import Bond
-
-
-class HelloWorld(APIView):
-
-    def get(self, request):
-
-        return Response("Hello World!")
 
 
 class Bonds(APIView):
@@ -48,3 +43,27 @@ def get_gleif_response(lei_code):
     """Given a LEI code, returns the response when searching for the LEI code using the GLEIF API"""
 
     return requests.get("https://leilookup.gleif.org/api/v2/leirecords?lei=" + lei_code)
+
+
+@authentication_classes([])
+@permission_classes([])
+class Register(APIView):
+    """/register/ endpoint to register new users"""
+
+    def post(self, request):
+        """POST method"""
+
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        if not username or not password:
+            return Response(status=400, data={"username": "required", "password": "required"})
+
+        if User.objects.filter(username=username):
+            return Response(status=409, data="Username already exists, please provide another.")
+
+        new_user = User.objects.create_user(username=username,
+                                            password=password)
+        new_user.save()
+
+        return Response(status=200, data="User created successfully")

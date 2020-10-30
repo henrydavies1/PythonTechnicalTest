@@ -1,17 +1,10 @@
-from rest_framework.test import APISimpleTestCase, APITestCase
+from rest_framework.test import APITestCase, APIClient
+from django.contrib.auth.models import User
 from django.test import TestCase
 from datetime import datetime
 
 from .views import get_gleif_response
 from .models import Bond
-
-
-class HelloWorld(APISimpleTestCase):
-
-    def test_root(self):
-
-        resp = self.client.get("/")
-        assert resp.status_code == 200
 
 
 class GetGleifResponseTest(TestCase):
@@ -35,6 +28,20 @@ class GetGleifResponseTest(TestCase):
 
 
 class BondsAPITest(APITestCase):
+
+    def setUp(self):
+
+        login_details = {
+            "username": "test_user_bonds",
+            "password": "djy6T6W8ki$"
+        }
+        self.client = APIClient()
+
+        # Create a test user, retrieve their token and then set the client's credentials
+        self.client.post(path='/register/', data=login_details)
+        login_response = self.client.post(path="/api-token-auth/", data=login_details)
+        token = login_response.data.get("token")
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
     def test_status_400_returned_when_lei_code_is_invalid(self):
 
@@ -99,3 +106,70 @@ class BondsAPITest(APITestCase):
         self.assertEqual(created_bond.maturity, maturity_date)
         self.assertEqual(created_bond.lei, bond_with_correct_details["lei"])
         self.assertEqual(created_bond.legal_name, "BNP PARIBAS")
+
+
+class RegisterTest(APITestCase):
+
+    def test_user_not_registered_if_username_not_provided(self):
+
+        user_details_no_username_field = {
+            "password": "hyT65DhfnE"
+        }
+
+        user_details_blank_username_field = {
+            "username": "",
+            "password": "hyT65DhfnE"
+        }
+
+        register_response = self.client.post(path='/register/', data=user_details_no_username_field)
+        self.assertEqual(register_response.status_code, 400)
+        self.assertEqual(register_response.data, {"username": "required", "password": "required"})
+
+        register_response = self.client.post(path='/register/', data=user_details_blank_username_field)
+        self.assertEqual(register_response.status_code, 400)
+        self.assertEqual(register_response.data, {"username": "required", "password": "required"})
+
+    def test_user_not_registered_if_password_not_provided(self):
+
+        user_details_no_password_field = {
+            "username": "test_user"
+        }
+
+        user_details_blank_password_field = {
+            "username": "test_user",
+            "password": ""
+        }
+
+        register_response = self.client.post(path='/register/', data=user_details_no_password_field)
+        self.assertEqual(register_response.status_code, 400)
+        self.assertEqual(register_response.data, {"username": "required", "password": "required"})
+
+        register_response = self.client.post(path='/register/', data=user_details_blank_password_field)
+        self.assertEqual(register_response.status_code, 400)
+        self.assertEqual(register_response.data, {"username": "required", "password": "required"})
+
+    def test_user_with_valid_credentials_is_registered(self):
+
+        user_details_valid = {
+            "username": "test_user",
+            "password": "hyT65DhfnE"
+        }
+
+        register_response = self.client.post(path='/register/', data=user_details_valid)
+        self.assertEqual(register_response.status_code, 200)
+        self.assertEqual(register_response.data, "User created successfully")
+
+        created_user = User.objects.all().last()
+        self.assertEqual(created_user.username, "test_user")
+
+    def test_user_cannot_register_with_an_existing_username(self):
+
+        user_details_valid = {
+            "username": "test_user",
+            "password": "hyT65DhfnE"
+        }
+
+        self.client.post(path='/register/', data=user_details_valid)
+        register_response = self.client.post(path='/register/', data=user_details_valid)
+        self.assertEqual(register_response.status_code, 409)
+        self.assertEqual(register_response.data, "Username already exists, please provide another.")
