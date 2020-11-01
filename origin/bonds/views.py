@@ -10,6 +10,24 @@ from .models import Bond
 class Bonds(APIView):
     """/bonds/ endpoint"""
 
+    def get(self, request):
+        """GET method"""
+
+        users_bonds = Bond.objects.filter(user=request.user)
+        return_data = []
+        for bond in users_bonds:
+            bond_dict = {
+                "isin": bond.isin,
+                "size": bond.size,
+                "currency": bond.currency,
+                "maturity": bond.maturity,
+                "lei": bond.lei,
+                "legal_name": bond.legal_name
+            }
+            return_data.append(bond_dict)
+
+        return Response(status=200, data=return_data)
+
     def post(self, request):
         """POST method"""
 

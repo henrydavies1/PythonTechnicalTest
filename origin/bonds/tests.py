@@ -29,19 +29,25 @@ class GetGleifResponseTest(TestCase):
 
 class BondsAPITest(APITestCase):
 
-    def setUp(self):
+    # Helper method to create a user
+    def create_user(self, username, password):
 
-        login_details = {
-            "username": "test_user_bonds",
-            "password": "djy6T6W8ki$"
-        }
-        self.client = APIClient()
+        self.client.post(path='/register/', data={"username": username, "password": password})
 
-        # Create a test user, retrieve their token and then set the client's credentials
-        self.client.post(path='/register/', data=login_details)
-        login_response = self.client.post(path="/api-token-auth/", data=login_details)
+    # Helper method to login as a user
+    def login_user(self, username, password):
+
+        login_response = self.client.post(path="/api-token-auth/", data={"username": username, "password": password})
         token = login_response.data.get("token")
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
+
+    def setUp(self):
+
+        self.client = APIClient()
+
+        # Create and login a test_user_1
+        self.create_user("test_user_1", "djy6T6W8ki$")
+        self.login_user("test_user_1", "djy6T6W8ki$")
 
     def test_status_400_returned_when_lei_code_is_invalid(self):
 
@@ -106,7 +112,88 @@ class BondsAPITest(APITestCase):
         self.assertEqual(created_bond.maturity, maturity_date)
         self.assertEqual(created_bond.lei, bond_with_correct_details["lei"])
         self.assertEqual(created_bond.legal_name, "BNP PARIBAS")
-        self.assertEqual(created_bond.user.username, "test_user_bonds")
+        self.assertEqual(created_bond.user.username, "test_user_1")
+
+    def test_no_bonds_returned_for_user_with_no_bonds(self):
+
+        response = self.client.get(path="/bonds/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, [])
+
+    def test_users_bonds_are_returned(self):
+
+        bond_1 = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        bond_2 = {
+            "isin": "GB0003HVGHA3",
+            "size": 245678,
+            "currency": "GBP",
+            "maturity": "2022-06-06",
+            "lei": "F32G12M10LW6RUUWKX69"
+        }
+
+        # Create first bond, then check it is returned correctly from the GET request
+        self.client.post(path="/bonds/", data=bond_1)
+        response = self.client.get(path="/bonds/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]["isin"], bond_1["isin"])
+
+        # Create the second bond, then check both bonds are returned correctly from the GET request
+        self.client.post(path="/bonds/", data=bond_2)
+        response = self.client.get(path="/bonds/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]["isin"], bond_1["isin"])
+        self.assertEqual(response.data[1]["isin"], bond_2["isin"])
+
+    def test_only_the_requesting_users_bonds_are_returned(self):
+
+        test_user_1_bond = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        test_user_2_bond = {
+            "isin": "GB0003HVGHA3",
+            "size": 245678,
+            "currency": "GBP",
+            "maturity": "2022-06-06",
+            "lei": "F32G12M10LW6RUUWKX69"
+        }
+
+        # Create bond for test_user_1
+        self.client.post(path="/bonds/", data=test_user_1_bond)
+
+        # Create user test_user_2 and login
+        self.create_user("test_user_2", "dY6G4FmAkyuS")
+        self.login_user("test_user_2", "dY6G4FmAkyuS")
+
+        # Send GET request, and check no bonds are returned
+        get_response = self.client.get(path="/bonds/")
+        self.assertEqual(get_response.status_code, 200)
+        self.assertEqual(get_response.data, [])
+
+        # Create bond for test_user_2, and check it is the only bond returned by a GET request
+        self.client.post(path="/bonds/", data=test_user_2_bond)
+        get_response = self.client.get(path="/bonds/")
+        self.assertEqual(get_response.status_code, 200)
+        self.assertEqual(len(get_response.data), 1)
+        self.assertEqual(get_response.data[0]["isin"], "GB0003HVGHA3")
+
+        # Log back into test_user_1, and check test_user_1_bond is the only bond returned
+        self.login_user("test_user_1", "djy6T6W8ki$")
+        get_response = self.client.get(path="/bonds/")
+        self.assertEqual(get_response.status_code, 200)
+        self.assertEqual(len(get_response.data), 1)
+        self.assertEqual(get_response.data[0]["isin"], "FR0000131104")
 
 
 class RegisterTest(APITestCase):
