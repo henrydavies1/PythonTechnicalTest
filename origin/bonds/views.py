@@ -58,7 +58,7 @@ class Bonds(APIView):
                 "isin": bond.isin,
                 "size": bond.size,
                 "currency": bond.currency,
-                "maturity": bond.maturity,
+                "maturity": bond.maturity.strftime("%Y-%m-%d"),
                 "lei": bond.lei,
                 "legal_name": bond.legal_name
             }
