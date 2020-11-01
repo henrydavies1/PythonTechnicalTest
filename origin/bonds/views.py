@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import authentication_classes, permission_classes
 from django.contrib.auth.models import User
 import requests
+from datetime import datetime
 
 from .models import Bond
 
@@ -13,9 +14,46 @@ class Bonds(APIView):
     def get(self, request):
         """GET method"""
 
-        users_bonds = Bond.objects.filter(user=request.user)
+        query_set = Bond.objects.filter(user=request.user)
+
+        isin_term = request.query_params.get("isin")
+        size_term = request.query_params.get("size")
+        currency_term = request.query_params.get("currency")
+        maturity_term = request.query_params.get("maturity")
+        lei_term = request.query_params.get("lei")
+        legal_name_term = request.query_params.get("legal_name")
+
+        # Apply filtering for each given search term
+        if isin_term:
+            query_set = query_set.filter(isin=isin_term.replace('\n', ''))
+        if size_term:
+
+            # Convert the size term from a string to an integer before filtering
+            try:
+                size_term_as_integer = int(size_term.replace('\n', ''))
+                query_set = query_set.filter(size=size_term_as_integer)
+            except ValueError:
+                return Response(status=400, data="An integer must be provided for search term 'size'.")
+
+        if currency_term:
+            query_set = query_set.filter(currency=currency_term.replace('\n', ''))
+        if maturity_term:
+
+            # Convert the date term from a string to a date object before filtering
+            try:
+                maturity_term_as_date = datetime.strptime(maturity_term.replace('\n', ''), "%Y-%m-%d").date()
+                query_set = query_set.filter(maturity=maturity_term_as_date)
+            except ValueError:
+                return Response(status=400, data="Dates must be given in the following format: YYYY-mm-dd. For "
+                                                 "example: 2023-06-07")
+
+        if lei_term:
+            query_set = query_set.filter(lei=lei_term.replace('\n', ''))
+        if legal_name_term:
+            query_set = query_set.filter(legal_name=legal_name_term.replace('\n', ''))
+
         return_data = []
-        for bond in users_bonds:
+        for bond in query_set:
             bond_dict = {
                 "isin": bond.isin,
                 "size": bond.size,

@@ -195,6 +195,203 @@ class BondsAPITest(APITestCase):
         self.assertEqual(len(get_response.data), 1)
         self.assertEqual(get_response.data[0]["isin"], "FR0000131104")
 
+    def test_search_for_bond_with_one_matching_search_term_returns_bond(self):
+
+        bond = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        self.client.post(path="/bonds/", data=bond)
+
+        response = self.client.get(path="/bonds/", data={"isin": "FR0000131104"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+
+        response = self.client.get(path="/bonds/", data={"size": "100000000"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+
+        response = self.client.get(path="/bonds/", data={"currency": "EUR"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+
+        response = self.client.get(path="/bonds/", data={"maturity": "2025-02-28"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+
+        response = self.client.get(path="/bonds/", data={"lei": "R0MUWSFPU8MPRO8K5P83"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+
+        response = self.client.get(path="/bonds/", data={"legal_name": "BNP PARIBAS"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+
+    def test_search_for_bond_with_one_non_matching_search_term_does_not_return_bond(self):
+
+        bond = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        self.client.post(path="/bonds/", data=bond)
+
+        response = self.client.get(path="/bonds/", data={"isin": "FR0000131103"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+        response = self.client.get(path="/bonds/", data={"size": "100000001"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+        response = self.client.get(path="/bonds/", data={"currency": "GBP"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+        response = self.client.get(path="/bonds/", data={"maturity": "2025-03-28"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+        response = self.client.get(path="/bonds/", data={"lei": "R0MUWSFPU8MPRO8K5P88"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+        response = self.client.get(path="/bonds/", data={"legal_name": "BNP PARIBAS A"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+    def test_search_for_bond_with_invalid_size_term_returns_status_code_400(self):
+
+        bond = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        self.client.post(path="/bonds/", data=bond)
+
+        response = self.client.get(path="/bonds/", data={"size": "100000a"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "An integer must be provided for search term 'size'.")
+
+    def test_search_for_bond_with_invalid_maturity_term_returns_status_code_400(self):
+
+        bond = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        self.client.post(path="/bonds/", data=bond)
+
+        response = self.client.get(path="/bonds/", data={"maturity": "2025-02-28a"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, "Dates must be given in the following format: YYYY-mm-dd. For example: "
+                                        "2023-06-07")
+
+    def test_search_for_bond_with_two_matching_search_terms_returns_bond(self):
+
+        bond = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        self.client.post(path="/bonds/", data=bond)
+
+        response = self.client.get(path="/bonds/", data={"currency": "EUR", "lei": "R0MUWSFPU8MPRO8K5P83"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+
+    def test_search_for_bond_with_one_matching_and_one_non_matching_search_term_does_not_return_bond(self):
+
+        bond = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        self.client.post(path="/bonds/", data=bond)
+
+        response = self.client.get(path="/bonds/", data={"currency": "GBP", "lei": "R0MUWSFPU8MPRO8K5P83"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+    def test_search_with_term_that_matches_two_bonds_returns_two_bonds(self):
+
+        bond_1 = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        bond_2 = {
+            "isin": "GB0003HVGHA3",
+            "size": 245678,
+            "currency": "EUR",
+            "maturity": "2022-06-06",
+            "lei": "F32G12M10LW6RUUWKX69"
+        }
+
+        self.client.post(path="/bonds/", data=bond_1)
+        self.client.post(path="/bonds/", data=bond_2)
+
+        response = self.client.get(path="/bonds/", data={"currency": "EUR"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0].get("isin"), "FR0000131104")
+        self.assertEqual(response.data[1].get("isin"), "GB0003HVGHA3")
+
+    def test_search_with_term_that_matches_one_bond_returns_one_bond_only(self):
+
+        bond_1 = {
+            "isin": "FR0000131104",
+            "size": 100000000,
+            "currency": "EUR",
+            "maturity": "2025-02-28",
+            "lei": "R0MUWSFPU8MPRO8K5P83"
+        }
+
+        bond_2 = {
+            "isin": "GB0003HVGHA3",
+            "size": 245678,
+            "currency": "EUR",
+            "maturity": "2022-06-06",
+            "lei": "F32G12M10LW6RUUWKX69"
+        }
+
+        self.client.post(path="/bonds/", data=bond_1)
+        self.client.post(path="/bonds/", data=bond_2)
+
+        response = self.client.get(path="/bonds/", data={"size": "245678"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0].get("isin"), "GB0003HVGHA3")
+
 
 class RegisterTest(APITestCase):
 
