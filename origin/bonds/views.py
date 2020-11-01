@@ -33,7 +33,8 @@ class Bonds(APIView):
                         currency=request.data.get("currency"),
                         maturity=request.data.get("maturity"),
                         lei=request.data.get("lei"),
-                        legal_name=legal_name)
+                        legal_name=legal_name,
+                        user=request.user)
         new_bond.save()
 
         return Response("Bond successfully created.")

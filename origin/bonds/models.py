@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Bond(models.Model):
@@ -9,3 +10,4 @@ class Bond(models.Model):
     maturity = models.DateField()
     lei = models.CharField(max_length=30)
     legal_name = models.CharField(max_length=100)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)

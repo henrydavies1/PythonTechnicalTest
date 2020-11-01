@@ -106,6 +106,7 @@ class BondsAPITest(APITestCase):
         self.assertEqual(created_bond.maturity, maturity_date)
         self.assertEqual(created_bond.lei, bond_with_correct_details["lei"])
         self.assertEqual(created_bond.legal_name, "BNP PARIBAS")
+        self.assertEqual(created_bond.user.username, "test_user_bonds")
 
 
 class RegisterTest(APITestCase):
