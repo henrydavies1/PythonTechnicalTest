@@ -55,3 +55,27 @@ We would also like to be able to add a filter such as:
 `GET /bonds/?legal_name=BNPPARIBAS`
 
 to reduce down the results.
+
+### User authentication
+
+User authentication is implemented using tokens. To receive a token, a user must first register.
+
+To register a new user, send a request:
+
+`POST /register/`
+
+with the following JSON data:
+
+`{
+    "username": username,
+    "password": password
+}`
+
+Then, to receive a token send a request:
+
+`POST /api-token-auth/`
+
+with the same JSON data. 
+
+Now when making requests to the `/bonds/` endpoint add a header with key `Authorization` and value `Token {token returned from above request}`.
+
